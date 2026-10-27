@@ -58,6 +58,11 @@ RUN pnpm install --frozen-lockfile
 
 COPY ./BillNote_frontend /tmp/frontend
 
+# 构建标识（commit + 构建时间），由 workflow 注入；页面角标展示，并与后端比对发现缓存的旧页面
+ARG BUILD_SHA=
+ARG BUILD_TIME=
+ENV VITE_BUILD_SHA=${BUILD_SHA} VITE_BUILD_TIME=${BUILD_TIME}
+
 # 设置环境变量，告诉 vite.config.ts 这是 Docker 构建
 ENV DOCKER_BUILD=1
 RUN pnpm run build
@@ -141,4 +146,10 @@ EOF
 # 单个变量覆盖：
 #   docker run -d -e TRANSCRIBER_TYPE=groq -e WHISPER_MODEL_SIZE=base ...
 EXPOSE 80
+
+# 后端的构建标识：/api/sys_health 返回它，前端拿来和自己的比对（放最后，不影响前面的层缓存）
+ARG BUILD_SHA=
+ARG BUILD_TIME=
+RUN printf '{"sha": "%s", "time": "%s"}\n' "${BUILD_SHA}" "${BUILD_TIME}" > /app/build.json
+
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

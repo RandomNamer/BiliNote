@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Github, Star, ExternalLink, Download } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area.tsx'
 import logo from '@/assets/icon.svg'
+import BuildBadge from '@/components/BuildBadge.tsx'
 
 // 二维码统一走 GitHub 在线地址：后续在仓库替换图片后，已打包的 App 会自动更新，无需重新发版
 const GITHUB_DOC_RAW = 'https://raw.githubusercontent.com/JefferyHcool/BiliNote/master/doc'
@@ -34,6 +35,8 @@ export default function AboutPage() {
             />
             <h1 className="text-4xl font-bold">BiliNote v{appVersion}</h1>
           </div>
+          <BuildBadge className="mb-4 text-sm" />
+
           <p className="text-muted-foreground mb-6 text-xl italic">
             AI 视频笔记生成工具 让 AI 为你的视频做笔记
           </p>

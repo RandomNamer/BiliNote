@@ -36,6 +36,9 @@ export default defineConfig(({ mode }) => {
     base: process.env.DOCKER_BUILD ? '/' : './',
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
+      // 构建标识（Dockerfile.complete 从 workflow 注入）；本地开发为空
+      __BUILD_SHA__: JSON.stringify(process.env.VITE_BUILD_SHA || ''),
+      __BUILD_TIME__: JSON.stringify(process.env.VITE_BUILD_TIME || ''),
     },
     plugins: [react(), tailwindcss()],
     resolve: {

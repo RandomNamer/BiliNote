@@ -18,6 +18,17 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 cookie_manager = CookieConfigManager()
+
+# 镜像构建时写入（Dockerfile.complete）；本地运行时不存在
+BUILD_INFO_FILE = Path(os.getenv("BUILD_INFO_FILE", "/app/build.json"))
+
+
+def _build_info() -> Optional[dict]:
+    try:
+        import json
+        return json.loads(BUILD_INFO_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
 transcriber_config_manager = TranscriberConfigManager()
 
 
@@ -439,6 +450,7 @@ async def sys_health():
         "ffmpeg": ffmpeg_status,
         "db": db_status,
         "whisper_model": whisper_info,
+        "build": _build_info(),
     })
 
 

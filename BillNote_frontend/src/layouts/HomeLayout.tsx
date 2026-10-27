@@ -21,6 +21,7 @@ import type { ImperativePanelHandle } from 'react-resizable-panels'
 import logo from '@/assets/icon.svg'
 import { useIsMobile } from '@/hooks/useIsMobile.ts'
 import { useTaskStore } from '@/store/taskStore'
+import BuildBadge from '@/components/BuildBadge.tsx'
 
 interface IProps {
   NoteForm: React.ReactNode
@@ -57,9 +58,12 @@ const MobileHomeLayout: FC<IProps> = ({ NoteForm, Preview, History }) => {
           <img src={logo} alt="logo" className="h-7 w-7 object-contain" />
           <div className="text-lg font-bold text-gray-800">BiliNote</div>
         </div>
-        <Link to={'/settings'} aria-label="全局配置">
-          <SlidersHorizontal className="text-muted-foreground h-5 w-5" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <BuildBadge />
+          <Link to={'/settings'} aria-label="全局配置">
+            <SlidersHorizontal className="text-muted-foreground h-5 w-5" />
+          </Link>
+        </div>
       </header>
 
       <div className="min-h-0 flex-1">
@@ -151,6 +155,9 @@ const HomeLayout: FC<IProps> = ({ NoteForm, Preview, History }) => {
             <ScrollArea className="flex-1 overflow-auto">
               <div className="p-4">{NoteForm}</div>
             </ScrollArea>
+            <footer className="shrink-0 border-t border-neutral-100 px-4 py-1.5">
+              <BuildBadge />
+            </footer>
           </aside>
         </ResizablePanel>
 
