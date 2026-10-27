@@ -31,7 +31,9 @@ export default defineConfig(({ mode }) => {
   const appVersion = env.VITE_APP_VERSION || process.env.VITE_APP_VERSION || readAppVersion()
 
   return {
-    base: './',
+    // 桌面端（Tauri）从本地文件加载，需要相对路径；Docker 由 nginx 托管，必须用绝对路径，
+    // 否则在 /settings/model 这类深层地址刷新时 ./assets 解析到 /settings/assets，页面白屏
+    base: process.env.DOCKER_BUILD ? '/' : './',
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
     },
