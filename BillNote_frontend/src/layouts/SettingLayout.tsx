@@ -20,16 +20,17 @@ const SettingLayout = ({ Menu }: ISettingLayoutProps) => {
         backgroundColor: 'var(--color-muted)',
       }}
     >
-      <div className="flex flex-1">
+      {/* 手机：菜单变成顶部横向一行，内容在下方；md 以上保持左右两栏 */}
+      <div className="flex h-dvh flex-col md:h-auto md:flex-1 md:flex-row">
         {/* 左侧部分：Header + 表单 */}
-        <aside className="flex w-[300px] flex-col border-r border-neutral-200 bg-white">
+        <aside className="flex shrink-0 flex-col border-b border-neutral-200 bg-white md:w-[300px] md:border-r md:border-b-0">
           {/* Header */}
-          <header className="flex h-16 items-center justify-between px-6">
+          <header className="flex h-12 items-center justify-between px-4 md:h-16 md:px-6">
             <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl">
+              <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-2xl md:h-10 md:w-10">
                 <img src={logo} alt="logo" className="h-full w-full object-contain" />
               </div>
-              <div className="text-2xl font-bold text-gray-800">BiliNote</div>
+              <div className="text-lg font-bold text-gray-800 md:text-2xl">BiliNote</div>
             </div>
             <div>
               <TooltipProvider>
@@ -48,14 +49,14 @@ const SettingLayout = ({ Menu }: ISettingLayoutProps) => {
           </header>
 
           {/* 表单内容 */}
-          <div className="flex-1 overflow-auto p-4">
+          <div className="overflow-x-auto px-2 pb-2 [scrollbar-width:none] md:flex-1 md:overflow-auto md:p-4 md:[scrollbar-width:auto]">
             {/*<NoteForm />*/}
             {Menu}
           </div>
         </aside>
 
         {/* 右侧预览区域 */}
-        <main className="h-screen flex-1 overflow-hidden">
+        <main className="min-h-0 flex-1 overflow-hidden md:h-screen">
           <Outlet />
         </main>
       </div>

@@ -19,16 +19,16 @@ const MenuBar: ({ menuItem }: { menuItem: any }) => JSX.Element = ({ menuItem })
     location.pathname.startsWith(menuItem.path + '/') || location.pathname === menuItem.path
 
   return (
-    <Link to={menuItem.path} className="w-full">
+    <Link to={menuItem.path} className="shrink-0 md:w-full">
       <div
         className={
           styles.menuBar +
-          ' flex h-12 w-full items-center gap-1 rounded px-2' +
+          ' flex h-10 w-full items-center gap-1 rounded px-2 whitespace-nowrap md:h-12' +
           (isActive ? ' bg-[#F0F0F0] font-semibold text-blue-600' : '')
         }
       >
         <div className="h-6 w-6">{menuItem.icon}</div>
-        <div className="text-[16px]">{menuItem.name}</div>
+        <div className="text-sm md:text-[16px]">{menuItem.name}</div>
       </div>
     </Link>
   )

@@ -1,5 +1,12 @@
-import React, { FC, useRef, useState } from 'react'
-import { SlidersHorizontal, PanelLeftClose, PanelLeftOpen, History as HistoryIcon } from 'lucide-react'
+import React, { FC, useEffect, useRef, useState } from 'react'
+import {
+  SlidersHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  History as HistoryIcon,
+  FilePlus2,
+  FileText,
+} from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -12,11 +19,71 @@ import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/componen
 import { ScrollArea } from "@/components/ui/scroll-area.tsx"
 import type { ImperativePanelHandle } from 'react-resizable-panels'
 import logo from '@/assets/icon.svg'
+import { useIsMobile } from '@/hooks/useIsMobile.ts'
+import { useTaskStore } from '@/store/taskStore'
 
 interface IProps {
   NoteForm: React.ReactNode
   Preview: React.ReactNode
   History: React.ReactNode
+}
+
+type MobileTab = 'form' | 'history' | 'note'
+
+const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'form', label: '工作区', icon: <FilePlus2 className="h-5 w-5" /> },
+  { id: 'history', label: '历史', icon: <HistoryIcon className="h-5 w-5" /> },
+  { id: 'note', label: '笔记', icon: <FileText className="h-5 w-5" /> },
+]
+
+// 手机：三块一次只显示一块，底部切换；三块都保持挂载，表单输入和滚动位置不丢
+const MobileHomeLayout: FC<IProps> = ({ NoteForm, Preview, History }) => {
+  const currentTaskId = useTaskStore(state => state.currentTaskId)
+  const [tab, setTab] = useState<MobileTab>(currentTaskId ? 'note' : 'form')
+
+  // 选中历史笔记或提交新任务（都会改 currentTaskId）后直接跳到笔记
+  const lastTaskId = useRef(currentTaskId)
+  useEffect(() => {
+    if (currentTaskId && currentTaskId !== lastTaskId.current) setTab('note')
+    lastTaskId.current = currentTaskId
+  }, [currentTaskId])
+
+  const pane = (id: MobileTab) => (tab === id ? 'h-full' : 'hidden')
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden bg-white">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-neutral-200 px-4">
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="logo" className="h-7 w-7 object-contain" />
+          <div className="text-lg font-bold text-gray-800">BiliNote</div>
+        </div>
+        <Link to={'/settings'} aria-label="全局配置">
+          <SlidersHorizontal className="text-muted-foreground h-5 w-5" />
+        </Link>
+      </header>
+
+      <div className="min-h-0 flex-1">
+        <div className={`${pane('form')} overflow-y-auto p-4`}>{NoteForm}</div>
+        <div className={`${pane('history')} overflow-y-auto`}>{History}</div>
+        <main className={`${pane('note')} flex flex-col overflow-hidden p-3`}>{Preview}</main>
+      </div>
+
+      <nav className="grid shrink-0 grid-cols-3 border-t border-neutral-200 pb-[env(safe-area-inset-bottom)]">
+        {MOBILE_TABS.map(item => (
+          <button
+            key={item.id}
+            onClick={() => setTab(item.id)}
+            className={`flex h-14 flex-col items-center justify-center gap-0.5 text-xs ${
+              tab === item.id ? 'font-semibold text-blue-600' : 'text-neutral-500'
+            }`}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </nav>
+    </div>
+  )
 }
 
 const HomeLayout: FC<IProps> = ({ NoteForm, Preview, History }) => {
@@ -25,6 +92,9 @@ const HomeLayout: FC<IProps> = ({ NoteForm, Preview, History }) => {
   const [isMiddleCollapsed, setIsMiddleCollapsed] = useState(false)
   const leftPanelRef = useRef<ImperativePanelHandle>(null)
   const middlePanelRef = useRef<ImperativePanelHandle>(null)
+  const isMobile = useIsMobile()
+
+  if (isMobile) return <MobileHomeLayout NoteForm={NoteForm} Preview={Preview} History={History} />
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">

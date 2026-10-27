@@ -498,7 +498,8 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
                 </div>
               ) : (
               <>
-              <ScrollArea className="min-w-0 flex-1">
+              {/* Radix 视口内层默认 display:table，会按正文不换行宽度撑开，窄屏横向溢出 */}
+              <ScrollArea className="min-w-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block">
                 <div className="px-2">
                   <VideoBanner
                     audioMeta={currentTask?.audioMeta}

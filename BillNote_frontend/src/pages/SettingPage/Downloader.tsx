@@ -3,12 +3,17 @@ import Options from '@/components/Form/DownloaderForm/Options.tsx'
 import ProxyConfig from '@/components/Form/DownloaderForm/ProxyConfig.tsx'
 const Downloader = () => {
   return (
-    <div className={'flex h-full bg-white'}>
-      <div className={'flex flex-1/5 flex-col gap-3 overflow-y-auto border-r border-neutral-200 p-2'}>
+    // 手机上上下堆叠、整页滚动；md 以上左右分栏
+    <div className={'flex h-full flex-col overflow-y-auto bg-white md:flex-row md:overflow-hidden'}>
+      <div
+        className={
+          'flex flex-col gap-3 border-b border-neutral-200 p-2 md:flex-1/5 md:overflow-y-auto md:border-r md:border-b-0'
+        }
+      >
         <ProxyConfig />
         <Options></Options>
       </div>
-      <div className={'flex-4/5'}>
+      <div className={'md:flex-4/5'}>
         <Outlet />
       </div>
     </div>

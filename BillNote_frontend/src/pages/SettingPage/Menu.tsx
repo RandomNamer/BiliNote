@@ -55,11 +55,11 @@ const Menu = () => {
   ]
   return (
     <div className="flex h-full flex-col">
-      <div className={'flex w-full flex-col gap-2'}>
+      <div className={'hidden w-full flex-col gap-2 md:flex'}>
         <div className="text-2xl font-medium">设置</div>
         <div className="text-sm font-light text-gray-800">全局配置与模型设置</div>
       </div>
-      <div className="mt-6 flex-1">
+      <div className="flex gap-1 md:mt-6 md:flex-1 md:flex-col md:gap-0">
         {menuList &&
           menuList.map(item => {
             return <MenuBar key={item.id} menuItem={item} />
