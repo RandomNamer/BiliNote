@@ -228,6 +228,14 @@ def generate_note(data: VideoRequest, background_tasks: BackgroundTasks):
         # 统一先写入 PENDING，表示已进入队列等待串行执行
         NoteGenerator()._update_status(task_id, TaskStatus.PENDING)
 
+        # 保存请求参数，供其它设备同步历史后重试 / 显示（见 routers/history.py）
+        try:
+            request_data = data.model_dump(exclude={"task_id", "prefetched_transcript"})
+            with open(os.path.join(NOTE_OUTPUT_DIR, f"{task_id}_request.json"), "w", encoding="utf-8") as f:
+                json.dump(request_data, f, ensure_ascii=False, indent=2, default=str)
+        except Exception as e:
+            logger.warning(f"保存请求参数失败 (task_id={task_id}): {e}")
+
         # 客户端已经抓好字幕的话，写到转写缓存文件，NoteGenerator 的 cache-hit 逻辑会直接用上
         if data.prefetched_transcript:
             try:

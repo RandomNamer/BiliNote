@@ -59,6 +59,35 @@ export const delete_task = async ({ video_id, platform }) => {
   }
 }
 
+export interface ServerNote {
+  task_id: string
+  created_at: string
+  audio_meta: Record<string, any>
+  form_data: Record<string, any> | null
+}
+
+// 服务端笔记历史（backend/app/routers/history.py），后台同步用，不弹错误提示
+export const get_note_list = async () =>
+  (await request.get('/note_list', { suppressToast: true })) as unknown as ServerNote[]
+
+export const get_note_result = async (task_id: string) =>
+  (await request.get('/task_status/' + task_id, { suppressToast: true })) as unknown as {
+    status: string
+    result?: { markdown: string; transcript: any; audio_meta: any }
+  }
+
+export const delete_note = async (task_id: string) => {
+  try {
+    const res = await request.post('/delete_note', { task_id })
+    toast.success('任务已成功删除')
+    return res
+  } catch (e) {
+    toast.error('请求异常，删除任务失败')
+    console.error('❌ 删除任务失败:', e)
+    throw e
+  }
+}
+
 export const get_task_status = async (task_id: string) => {
   try {
     // 成功提示

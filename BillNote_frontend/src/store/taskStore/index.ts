@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { delete_task, generateNote } from '@/services/note.ts'
+import { delete_note, generateNote } from '@/services/note.ts'
 import { v4 as uuidv4 } from 'uuid'
 import toast from 'react-hot-toast'
 import { get, set, del } from 'idb-keyval'
@@ -45,6 +45,7 @@ export interface Task {
   status: TaskStatus
   audioMeta: AudioMeta
   createdAt: string
+  platform?: string
   formData: {
     video_url: string
     link: undefined | boolean
@@ -62,6 +63,7 @@ interface TaskStore {
   addPendingTask: (taskId: string, platform: string) => void
   updateTaskContent: (id: string, data: Partial<Omit<Task, 'id' | 'createdAt'>>) => void
   removeTask: (id: string) => void
+  mergeServerNotes: (serverIds: string[], fetched: Task[]) => void
   clearTasks: () => void
   setCurrentTask: (taskId: string | null) => void
   getCurrentTask: () => Task | null
@@ -212,14 +214,26 @@ export const useTaskStore = create<TaskStore>()(
           currentTaskId: state.currentTaskId === id ? null : state.currentTaskId,
         }))
 
-        // 调用后端删除接口（如果找到了任务）
+        // 调用后端删除接口（如果找到了任务），服务端文件一并删除，其它设备同步时也会消失
         if (task) {
-          await delete_task({
-            video_id: task.audioMeta.video_id,
-            platform: task.platform,
-          })
+          await delete_note(task.id)
         }
       },
+
+      // 与服务端历史对齐：补上本地没有的笔记，移除服务端已删除的已完成笔记
+      mergeServerNotes: (serverIds, fetched) =>
+        set(state => {
+          const onServer = new Set(serverIds)
+          const kept = state.tasks.filter(t => t.status !== 'SUCCESS' || onServer.has(t.id))
+          const known = new Set(kept.map(t => t.id))
+          const tasks = [...kept, ...fetched.filter(t => !known.has(t.id))].sort((a, b) =>
+            b.createdAt.localeCompare(a.createdAt)
+          )
+          const currentTaskId = tasks.some(t => t.id === state.currentTaskId)
+            ? state.currentTaskId
+            : null
+          return { tasks, currentTaskId }
+        }),
 
       clearTasks: () => set({ tasks: [], currentTaskId: null }),
 
