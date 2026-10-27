@@ -499,7 +499,11 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
               ) : (
               <>
               {/* Radix 视口内层默认 display:table，会按正文不换行宽度撑开，窄屏横向溢出 */}
-              <ScrollArea className="min-w-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block">
+              {/* 按笔记 id 重建视口：换笔记从顶部开始，否则沿用上一篇的滚动位置（手机端面板隐藏时也一样） */}
+              <ScrollArea
+                key={currentTask?.id}
+                className="min-w-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block"
+              >
                 <div className="px-2">
                   <VideoBanner
                     audioMeta={currentTask?.audioMeta}
