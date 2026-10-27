@@ -43,6 +43,28 @@ def _audio_meta(task_id: str) -> dict:
     return meta
 
 
+def note_created_at(task_id: str) -> str | None:
+    """笔记的创建时间，所有设备都按它排序。
+
+    提交时记在 <task_id>_request.json 的 created_at 里，重试 / 重新生成都沿用（见 routers/note.py）。
+    之前的老笔记没有记录：取该任务所有文件里最早的 mtime（转写 / 音频缓存，最接近提交时间）；
+    结果文件的 mtime 是完成时间，重新生成后还会变。一个文件都没有时返回 None。
+    """
+    request = _read_json(NOTE_OUTPUT_DIR / f"{task_id}_request.json") or {}
+    if request.get("created_at"):
+        return request["created_at"]
+
+    mtimes = []
+    for path in NOTE_OUTPUT_DIR.glob(f"{task_id}*"):
+        try:
+            mtimes.append(path.stat().st_mtime)
+        except OSError:
+            pass
+    if not mtimes:
+        return None
+    return datetime.fromtimestamp(min(mtimes), tz=timezone.utc).isoformat()
+
+
 @router.get("/note_list")
 def note_list():
     if not NOTE_OUTPUT_DIR.exists():
@@ -54,12 +76,14 @@ def note_list():
         if not match:
             continue
         task_id = match.group(1)
-        created_at = datetime.fromtimestamp(entry.stat().st_mtime, tz=timezone.utc).isoformat()
+        form_data = _read_json(NOTE_OUTPUT_DIR / f"{task_id}_request.json")
+        if form_data:
+            form_data.pop("created_at", None)
         notes.append({
             "task_id": task_id,
-            "created_at": created_at,
+            "created_at": note_created_at(task_id),
             "audio_meta": _audio_meta(task_id),
-            "form_data": _read_json(NOTE_OUTPUT_DIR / f"{task_id}_request.json"),
+            "form_data": form_data,
         })
 
     notes.sort(key=lambda n: n["created_at"], reverse=True)

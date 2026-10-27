@@ -2,6 +2,7 @@
 import json
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from pydantic import BaseModel, validator, field_validator, model_validator
 from dataclasses import asdict
 
 from app.db.video_task_dao import get_task_by_video
+from app.routers.history import note_created_at
 from app.enmus.exception import NoteErrorEnum
 from app.enmus.note_enums import DownloadQuality
 from app.exceptions.note import NoteError
@@ -225,12 +227,16 @@ def generate_note(data: VideoRequest, background_tasks: BackgroundTasks):
             # 正常新建任务
             task_id = str(uuid.uuid4())
 
+        # 创建时间由服务端决定，重试 / 重新生成沿用原值；必须在写任何文件之前取（老笔记按文件 mtime 回退）
+        created_at = note_created_at(task_id) or datetime.now(timezone.utc).isoformat()
+
         # 统一先写入 PENDING，表示已进入队列等待串行执行
         NoteGenerator()._update_status(task_id, TaskStatus.PENDING)
 
-        # 保存请求参数，供其它设备同步历史后重试 / 显示（见 routers/history.py）
+        # 保存请求参数和创建时间，供其它设备同步历史后排序 / 重试 / 显示（见 routers/history.py）
         try:
             request_data = data.model_dump(exclude={"task_id", "prefetched_transcript"})
+            request_data["created_at"] = created_at
             with open(os.path.join(NOTE_OUTPUT_DIR, f"{task_id}_request.json"), "w", encoding="utf-8") as f:
                 json.dump(request_data, f, ensure_ascii=False, indent=2, default=str)
         except Exception as e:

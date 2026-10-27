@@ -63,7 +63,7 @@ interface TaskStore {
   addPendingTask: (taskId: string, platform: string) => void
   updateTaskContent: (id: string, data: Partial<Omit<Task, 'id' | 'createdAt'>>) => void
   removeTask: (id: string) => void
-  mergeServerNotes: (serverIds: string[], fetched: Task[]) => void
+  mergeServerNotes: (serverNotes: { task_id: string; created_at: string }[], fetched: Task[]) => void
   clearTasks: () => void
   setCurrentTask: (taskId: string | null) => void
   getCurrentTask: () => Task | null
@@ -220,14 +220,22 @@ export const useTaskStore = create<TaskStore>()(
         }
       },
 
-      // 与服务端历史对齐：补上本地没有的笔记，移除服务端已删除的已完成笔记
-      mergeServerNotes: (serverIds, fetched) =>
+      // 与服务端历史对齐：补上本地没有的笔记，移除服务端已删除的已完成笔记。
+      // 创建时间也以服务端为准（本地已有的笔记一并改掉），各设备的顺序才会一致
+      mergeServerNotes: (serverNotes, fetched) =>
         set(state => {
-          const onServer = new Set(serverIds)
-          const kept = state.tasks.filter(t => t.status !== 'SUCCESS' || onServer.has(t.id))
+          const serverCreatedAt = new Map(
+            serverNotes.map(n => [n.task_id, new Date(n.created_at).toISOString()])
+          )
+          const kept = state.tasks
+            .filter(t => t.status !== 'SUCCESS' || serverCreatedAt.has(t.id))
+            .map(t => {
+              const createdAt = serverCreatedAt.get(t.id)
+              return createdAt && createdAt !== t.createdAt ? { ...t, createdAt } : t
+            })
           const known = new Set(kept.map(t => t.id))
-          const tasks = [...kept, ...fetched.filter(t => !known.has(t.id))].sort((a, b) =>
-            b.createdAt.localeCompare(a.createdAt)
+          const tasks = [...kept, ...fetched.filter(t => !known.has(t.id))].sort(
+            (a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id)
           )
           const currentTaskId = tasks.some(t => t.id === state.currentTaskId)
             ? state.currentTaskId

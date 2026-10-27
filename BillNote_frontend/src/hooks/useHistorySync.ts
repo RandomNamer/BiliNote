@@ -75,10 +75,7 @@ export const useHistorySync = (enabled: boolean) => {
           }
         }
 
-        useTaskStore.getState().mergeServerNotes(
-          notes.map(n => n.task_id),
-          fetched
-        )
+        useTaskStore.getState().mergeServerNotes(notes, fetched)
       } catch (e) {
         console.warn('同步服务端历史失败', e)
       } finally {
