@@ -35,8 +35,10 @@ def generate_screenshot(video_path: str, output_dir: str, timestamp: int, index:
     print("Running command:", command)
     result = subprocess.run(command, capture_output=True, text=True)
 
-    if result.returncode != 0:
-        print("ffmpeg failed:", result.stderr)
+    # 失败时不能返回路径：调用方会把它写进笔记，变成一张 404 的图片
+    if result.returncode != 0 or not output_path.exists():
+        stderr_tail = "\n".join(result.stderr.strip().splitlines()[-3:])
+        raise RuntimeError(f"ffmpeg 截图失败 (exit {result.returncode}): {stderr_tail}")
 
     return str(output_path)
 

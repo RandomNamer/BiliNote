@@ -670,9 +670,9 @@ class NoteGenerator:
                 img_url = f"{IMAGE_BASE_URL.rstrip('/')}/{filename}"
                 markdown = markdown.replace(marker, f"![]({img_url})", 1)
             except Exception as exc:
+                # 只去掉这一处标记，其余截图和正文照常保留（返回 None 会让整篇笔记丢失）
                 logger.error(f"生成截图失败 (timestamp={ts})：{exc}")
-                # self._handle_exception(task_id, exc)
-                return None
+                markdown = markdown.replace(marker, "", 1)
         return markdown
 
     @staticmethod

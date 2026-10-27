@@ -27,6 +27,10 @@ WORKDIR /tmp/backend
 COPY ./backend/requirements.txt /tmp/backend/requirements.txt
 RUN pip install --no-cache-dir -i ${PIP_INDEX} -r requirements.txt
 
+# 站点解析器经常失效（B 站 "Unable to extract initial state" 等），每次构建取最新 yt-dlp；
+# [deno] 带上 YouTube 解析需要的 JS 运行时，[default] 带上 yt-dlp-ejs 等推荐依赖
+RUN pip install --no-cache-dir -i ${PIP_INDEX} -U "yt-dlp[default,deno]"
+
 COPY ./backend /tmp/backend
 
 # === 阶段2：构建 Frontend ===
