@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 load_dotenv()
 MAX_SIZE_MB = 18
 MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
+# A local OpenAI-compatible server (e.g. mlx-audio with Qwen3-ASR behind llama-swap) can take
+# minutes per hour of audio, plus a cold model load; the OpenAI client's default is 600 s.
+TRANSCRIBE_TIMEOUT = float(os.getenv('GROQ_TRANSCRIBE_TIMEOUT', '3600'))
 def compress_audio(input_path: str, target_bitrate='64k') -> str:
     output_fd, output_path = tempfile.mkstemp(suffix=".mp3")  # 临时输出文件
     os.close(output_fd)  # 关闭文件描述符，ffmpeg 会用路径操作
@@ -38,6 +41,7 @@ class GroqTranscriber(Transcriber, ABC):
             api_key=provider.get('api_key'),
             base_url=provider.get('base_url'),
             key_label="Groq 转写引擎的 API Key",
+            timeout=TRANSCRIBE_TIMEOUT,
         )
         filename = file_path
 
@@ -61,8 +65,13 @@ class GroqTranscriber(Transcriber, ABC):
                 text=text
             ))
 
+        # mlx-audio's Qwen3-ASR reports one language per 30 s chunk (a list); keep a single value
+        language = transcription.language
+        if isinstance(language, list):
+            language = next((l for l in language if l), None)
+
         result = TranscriptResult(
-            language=transcription.language,
+            language=language,
             full_text=full_text.strip(),
             segments=segments,
             raw=transcription.to_dict()
