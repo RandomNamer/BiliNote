@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 # app/downloaders/bilibili_dm_patch.py for details.
 apply_bilibili_dm_img_patch()
 
+# Bilibili's CDN (upos-*.bilivideo.com, *.akamaized.net) now answers 403 or 567 to a
+# media request without a bounded Range (no Range, or an open "bytes=0-"); "bytes=0-N"
+# gets 206. The web player and helper extensions fetch in bounded segments too.
+# http_chunk_size makes yt-dlp request every chunk as "bytes=start-end".
+BILIBILI_HTTP_CHUNK_SIZE = 10 * 1024 * 1024
+
 
 class BilibiliDownloader(Downloader, ABC):
     def __init__(self):
@@ -67,6 +73,7 @@ class BilibiliDownloader(Downloader, ABC):
             'format': 'bestaudio[ext=m4a]/bestaudio/best',
             'outtmpl': output_path,
             'http_headers': {'Referer': 'https://www.bilibili.com'},
+            'http_chunk_size': BILIBILI_HTTP_CHUNK_SIZE,
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
@@ -127,6 +134,7 @@ class BilibiliDownloader(Downloader, ABC):
             'format': 'bv*[ext=mp4]/bestvideo+bestaudio/best',
             'outtmpl': output_path,
             'http_headers': {'Referer': 'https://www.bilibili.com'},
+            'http_chunk_size': BILIBILI_HTTP_CHUNK_SIZE,
             'noplaylist': True,
             'quiet': False,
             'merge_output_format': 'mp4',  # 确保合并成 mp4
