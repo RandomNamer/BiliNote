@@ -163,16 +163,16 @@ class ModelService:
                 )
             model = saved_models[0]["model_name"]
 
-        ok = OpenAICompatibleProvider.test_connection(
+        error = OpenAICompatibleProvider.test_connection(
             api_key=provider.get('api_key'),
             base_url=provider.get('base_url'),
             model=model,
         )
-        if ok:
+        if error is None:
             return True
         raise ProviderError(
             code=ProviderErrorEnum.WRONG_PARAMETER.code,
-            message=ProviderErrorEnum.WRONG_PARAMETER.message,
+            message=f"连通性测试失败（{model}）：{error}",
         )
 
 

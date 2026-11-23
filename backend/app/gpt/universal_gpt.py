@@ -188,12 +188,14 @@ class UniversalGPT(GPT):
     @staticmethod
     def _is_temperature_unsupported_error(exc: Exception) -> bool:
         """OpenAI o1/o3/gpt-5 系列等新模型不接受自定义 temperature，
-        只允许默认值 1，传 0.7 会报 `'temperature' does not support 0.7 ...`。"""
+        只允许默认值 1，传 0.7 会报 `'temperature' does not support 0.7 ...`。
+        Claude 4.7+ 经 Anthropic 的 OpenAI 兼容接口报 `` `temperature` is deprecated for this model. ``"""
         raw = str(exc).lower()
         return "temperature" in raw and (
             "does not support" in raw
             or "unsupported_value" in raw
             or "only the default" in raw
+            or "deprecated" in raw
         )
 
     def _do_create(self, messages: list):

@@ -8,6 +8,8 @@
     在入口挡掉，给用户「xxx 的 API Key 未配置」这种能看懂的提示。
 """
 from typing import Optional
+from urllib.parse import urlsplit
+
 
 from openai import OpenAI
 
@@ -15,6 +17,25 @@ from app.services.proxy_config_manager import ProxyConfigManager
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+ANTHROPIC_HOST = "api.anthropic.com"
+ANTHROPIC_VERSION = "2023-06-01"
+
+
+def _anthropic_fixups(base_url: Optional[str]) -> tuple:
+    """Anthropic 的 OpenAI 兼容接口在 https://api.anthropic.com/v1/ 下：
+      - 少了 /v1（设置里常填成 https://api.anthropic.com）→ chat 和 /models 全是 404；
+      - /v1/models 要求 anthropic-version 头，OpenAI SDK 不发 → 400，模型下拉为空，
+        于是也加不了模型、测不了连通性。
+    返回 (修正后的 base_url, 额外默认请求头)；非 Anthropic 地址原样返回。
+    """
+    if not base_url or urlsplit(base_url).hostname != ANTHROPIC_HOST:
+        return base_url, None
+    parts = urlsplit(base_url)
+    path = parts.path.rstrip("/")
+    if not path.endswith("/v1"):
+        path = path + "/v1"
+    return f"{parts.scheme}://{parts.netloc}{path}/", {"anthropic-version": ANTHROPIC_VERSION}
 
 
 def build_openai_client(
@@ -31,7 +52,10 @@ def build_openai_client(
     if not api_key or not str(api_key).strip():
         raise ValueError(f"{key_label} 未配置，请先在「设置」里填写后再使用")
 
+    base_url, extra_headers = _anthropic_fixups(base_url)
     kwargs = {"api_key": str(api_key).strip(), "base_url": base_url}
+    if extra_headers:
+        kwargs["default_headers"] = extra_headers
     if timeout is not None:
         kwargs["timeout"] = timeout
 
