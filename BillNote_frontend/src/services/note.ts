@@ -94,11 +94,8 @@ export const get_task_status = async (task_id: string) => {
 
     return await request.get('/task_status/' + task_id)
   } catch (e) {
-    console.error('❌ 请求出错', e)
-
-    // 错误提示
-    toast.error('笔记生成失败，请稍后重试')
-
+    // 只是这一次查询失败（网络 / 页面在后台），不代表笔记失败；由 useTaskPolling 决定
+    console.warn('❌ 查询任务状态出错', e)
     throw e // 抛出错误以便调用方处理
   }
 }

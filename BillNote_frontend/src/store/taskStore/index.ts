@@ -227,9 +227,13 @@ export const useTaskStore = create<TaskStore>()(
           const serverCreatedAt = new Map(
             serverNotes.map(n => [n.task_id, new Date(n.created_at).toISOString()])
           )
+          const fetchedById = new Map(fetched.map(t => [t.id, t]))
           const kept = state.tasks
             .filter(t => t.status !== 'SUCCESS' || serverCreatedAt.has(t.id))
             .map(t => {
+              // the server finished a task this browser still shows as pending/failed
+              const repaired = t.status !== 'SUCCESS' ? fetchedById.get(t.id) : undefined
+              if (repaired) return { ...repaired, formData: t.formData ?? repaired.formData }
               const createdAt = serverCreatedAt.get(t.id)
               return createdAt && createdAt !== t.createdAt ? { ...t, createdAt } : t
             })

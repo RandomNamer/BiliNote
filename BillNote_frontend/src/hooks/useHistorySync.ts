@@ -63,10 +63,14 @@ export const useHistorySync = (enabled: boolean) => {
       try {
         await waitForHydration()
         const notes = await get_note_list()
-        const known = new Set(useTaskStore.getState().tasks.map(t => t.id))
+        // Already complete locally: skip. Unknown, or stuck as PENDING/FAILED (e.g. a poll failed
+        // while the phone was locked) although the server has the finished note: fetch it.
+        const complete = new Set(
+          useTaskStore.getState().tasks.filter(t => t.status === 'SUCCESS').map(t => t.id)
+        )
 
         const fetched: Task[] = []
-        for (const note of notes.filter(n => !known.has(n.task_id))) {
+        for (const note of notes.filter(n => !complete.has(n.task_id))) {
           try {
             const task = await toTask(note)
             if (task) fetched.push(task)
