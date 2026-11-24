@@ -36,7 +36,7 @@ def replace_content_markers(markdown: str, video_id: str, platform: str = 'bilib
     替换 *Content-04:16*、Content-04:16 或 Content-[04:16] 为超链接，跳转到对应平台视频的时间位置
     """
     # 匹配三种形式：*Content-04:16*、Content-04:16、Content-[04:16]
-    pattern = r"\*?Content-(?:\[(\d{2}):(\d{2})\]|(\d{2}):(\d{2}))\*?"
+    pattern = r"\*?Content-(?:\[(\d{1,3}):(\d{2})\]|(\d{1,3}):(\d{2}))\*?"
 
     # 注意：replacer 里不能再给 video_id 赋值，否则它在整个 replacer 里都变成局部变量，
     # 读取时抛 "cannot access local variable 'video_id'"，所有平台的跳转链接都会失败

@@ -31,7 +31,11 @@ class UniversalGPT(GPT):
         self._retry_base_backoff = float(os.getenv("OPENAI_RETRY_BACKOFF_SECONDS", "1.5"))
 
     def _format_time(self, seconds: float) -> str:
-        return str(timedelta(seconds=int(seconds)))[2:]
+        # Total minutes, never wrapping at the hour: "65:30", not "05:30" (timedelta[2:] dropped the
+        # hour, so in a 3 h video every hour reused 00:00-59:59). Matches the frame-grid labels and
+        # the *Content-/*Screenshot-[mm:ss] parser, which already take minutes above 59.
+        s = int(seconds)
+        return f"{s // 60:02d}:{s % 60:02d}"
 
     def _build_segment_text(self, segments: List[TranscriptSegment]) -> str:
         return "\n".join(
