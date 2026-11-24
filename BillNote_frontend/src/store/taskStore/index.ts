@@ -63,7 +63,10 @@ interface TaskStore {
   addPendingTask: (taskId: string, platform: string) => void
   updateTaskContent: (id: string, data: Partial<Omit<Task, 'id' | 'createdAt'>>) => void
   removeTask: (id: string) => void
-  mergeServerNotes: (serverNotes: { task_id: string; created_at: string }[], fetched: Task[]) => void
+  mergeServerNotes: (
+    serverNotes: { task_id: string; created_at: string; form_data?: Record<string, any> | null }[],
+    fetched: Task[]
+  ) => void
   clearTasks: () => void
   setCurrentTask: (taskId: string | null) => void
   getCurrentTask: () => Task | null
@@ -228,12 +231,19 @@ export const useTaskStore = create<TaskStore>()(
             serverNotes.map(n => [n.task_id, new Date(n.created_at).toISOString()])
           )
           const fetchedById = new Map(fetched.map(t => [t.id, t]))
+          // notes the server has request parameters for: its settings are the record of the last run
+          const serverHasForm = new Set(serverNotes.filter(n => n.form_data).map(n => n.task_id))
           const kept = state.tasks
             .filter(t => t.status !== 'SUCCESS' || serverCreatedAt.has(t.id))
             .map(t => {
-              // the server finished a task this browser still shows as pending/failed
-              const repaired = t.status !== 'SUCCESS' ? fetchedById.get(t.id) : undefined
-              if (repaired) return { ...repaired, formData: t.formData ?? repaired.formData }
+              // the server finished a task this browser still shows as pending/failed, or redid it
+              // with other settings (useHistorySync fetches only those)
+              const repaired = fetchedById.get(t.id)
+              if (repaired)
+                return {
+                  ...repaired,
+                  formData: serverHasForm.has(t.id) ? repaired.formData : (t.formData ?? repaired.formData),
+                }
               const createdAt = serverCreatedAt.get(t.id)
               return createdAt && createdAt !== t.createdAt ? { ...t, createdAt } : t
             })

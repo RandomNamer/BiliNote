@@ -65,8 +65,18 @@ export const useHistorySync = (enabled: boolean) => {
         const notes = await get_note_list()
         // Already complete locally: skip. Unknown, or stuck as PENDING/FAILED (e.g. a poll failed
         // while the phone was locked) although the server has the finished note: fetch it.
+        // Also re-fetch a "complete" note the server has since redone with other settings (a retry or
+        // regenerate on another model, from another device or the API), so its label and content follow.
+        const serverForm = new Map(notes.map(n => [n.task_id, n.form_data]))
+        const changedOnServer = (t: Task) => {
+          const f = serverForm.get(t.id)
+          return !!f && (f.model_name !== t.formData?.model_name || f.provider_id !== t.formData?.provider_id)
+        }
         const complete = new Set(
-          useTaskStore.getState().tasks.filter(t => t.status === 'SUCCESS').map(t => t.id)
+          useTaskStore
+            .getState()
+            .tasks.filter(t => t.status === 'SUCCESS' && !changedOnServer(t))
+            .map(t => t.id)
         )
 
         const fetched: Task[] = []
