@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, memo, FC } from 'react'
+import { useState, useEffect, useRef, useMemo, memo, FC, ImgHTMLAttributes } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button.tsx'
 import { Copy, Download, ArrowRight, Play, ExternalLink } from 'lucide-react'
@@ -25,6 +25,30 @@ import TranscriptViewer from '@/pages/HomePage/components/transcriptViewer.tsx'
 import MarkmapEditor from '@/pages/HomePage/components/MarkmapComponent.tsx'
 import ChatPanel from '@/pages/HomePage/components/ChatPanel.tsx'
 import VideoBanner from '@/pages/HomePage/components/VideoBanner.tsx'
+
+// Notes can hold hundreds of full-resolution screenshots. Load and decode each only when it nears
+// the viewport, and reserve a 16:9 box until it has loaded: an unloaded image has no height, so
+// without the box dozens of them count as "near the viewport" and load at once anyway.
+const LazyImage: FC<ImgHTMLAttributes<HTMLImageElement>> = props => {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <img
+      {...props}
+      loading="lazy"
+      decoding="async"
+      onLoad={e => {
+        setLoaded(true)
+        props.onLoad?.(e)
+      }}
+      className="mx-auto block max-w-full cursor-zoom-in rounded-lg object-contain shadow-md transition-all hover:shadow-lg"
+      style={
+        loaded
+          ? { maxHeight: '500px' }
+          : { maxHeight: '500px', width: '100%', aspectRatio: '16 / 9', background: '#f3f4f6' }
+      }
+    />
+  )
+}
 
 interface VersionNote {
   ver_id: string
@@ -99,8 +123,13 @@ function createMarkdownComponents(baseURL: string) {
         (children[0] as string).startsWith('原片 @')
 
       if (isOriginLink) {
-        const timeMatch = (children[0] as string).match(/原片 @ (\d{2}:\d{2})/)
-        const timeText = timeMatch ? timeMatch[1] : '原片'
+        // markers carry total minutes ("135:20"); show hours past the hour mark ("2:15:20")
+        const timeMatch = (children[0] as string).match(/原片 @ (\d{1,3}):(\d{2})/)
+        const timeText = timeMatch
+          ? Number(timeMatch[1]) >= 60
+            ? `${Math.floor(Number(timeMatch[1]) / 60)}:${String(Number(timeMatch[1]) % 60).padStart(2, '0')}:${timeMatch[2]}`
+            : `${timeMatch[1]}:${timeMatch[2]}`
+          : '原片'
 
         return (
           <span className="origin-link my-2 inline-flex">
@@ -186,13 +215,11 @@ function createMarkdownComponents(baseURL: string) {
       props.src = src
 
       return (
-        <div className="my-8 flex justify-center">
+        // Block layout, not a centring flexbox: a flex item shrinks to its content, and an image that
+        // hasn't loaded has none, so Zoom's wrapper measured 0 px wide and the reserved box collapsed.
+        <div className="my-8 [&_[data-rmiz]]:block [&_[data-rmiz]]:w-full">
           <Zoom>
-            <img
-              {...props}
-              className="max-w-full cursor-zoom-in rounded-lg object-cover shadow-md transition-all hover:shadow-lg"
-              style={{ maxHeight: '500px' }}
-            />
+            <LazyImage {...props} />
           </Zoom>
         </div>
       )
@@ -500,9 +527,12 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
               <>
               {/* Radix 视口内层默认 display:table，会按正文不换行宽度撑开，窄屏横向溢出 */}
               {/* 按笔记 id 重建视口：换笔记从顶部开始，否则沿用上一篇的滚动位置（手机端面板隐藏时也一样） */}
+              {/* 窄屏（< md）没有并排的空间：原文/问答面板打开时占满宽度，笔记先隐藏 */}
               <ScrollArea
                 key={currentTask?.id}
-                className="min-w-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block"
+                className={`min-w-0 flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block ${
+                  showTranscribe || showChat === 'half' ? 'max-md:hidden' : ''
+                }`}
               >
                 <div className="px-2">
                   <VideoBanner
@@ -521,13 +551,13 @@ const MarkdownViewer: FC<MarkdownViewerProps> = memo(({ status }) => {
                 </div>
               </ScrollArea>
               {showTranscribe && (
-                <div className={'ml-2 w-2/4'}>
+                <div className="w-full min-w-0 md:ml-2 md:w-2/4">
                   <TranscriptViewer />
                 </div>
               )}
               {/* 侧边问答模式：markdown + ChatPanel 各占一半 */}
               {showChat === 'half' && currentTask && (
-                <div className="ml-2 h-full w-1/2 shrink-0">
+                <div className="h-full w-full min-w-0 shrink-0 md:ml-2 md:w-1/2">
                   <ChatPanel taskId={currentTask.id} mode="half" onModeChange={setShowChat} />
                 </div>
               )}
