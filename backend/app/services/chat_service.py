@@ -2,6 +2,7 @@ import json
 from typing import Optional
 
 from app.gpt.gpt_factory import GPTFactory
+from app.gpt.universal_gpt import UniversalGPT
 from app.models.model_config import ModelConfig
 from app.services.provider import ProviderService
 from app.services.vector_store import VectorStoreManager
@@ -28,6 +29,19 @@ SYSTEM_PROMPT = """你是一个视频笔记问答助手。你拥有以下能力�
 - 回答关于作者、标题等基本信息时，用 get_video_info 查询
 - 请用中文回答，保持简洁准确"""
 
+
+
+def _create(gpt, **kwargs):
+    """chat.completions.create with temperature 0.7, retried without it for models that refuse a custom
+    temperature (Claude 4.7+ via Anthropic's OpenAI-compatible API: "`temperature` is deprecated for this
+    model"; OpenAI o-series / gpt-5: "does not support 0.7") — the same fallback note generation uses."""
+    try:
+        return gpt.client.chat.completions.create(model=gpt.model, temperature=0.7, **kwargs)
+    except Exception as exc:
+        if not UniversalGPT._is_temperature_unsupported_error(exc):
+            raise
+        logger.info(f"Chat: model {gpt.model} rejects temperature, retrying with the default")
+        return gpt.client.chat.completions.create(model=gpt.model, **kwargs)
 
 def _build_context(chunks: list[dict]) -> str:
     """将检索到的片段拼接为上下文文本。"""
@@ -115,12 +129,7 @@ def chat(
     # 4. Tool calling 循环（最多 3 轮）
     max_rounds = 3
     for round_i in range(max_rounds):
-        response = gpt.client.chat.completions.create(
-            model=gpt.model,
-            messages=messages,
-            tools=TOOLS,
-            temperature=0.7,
-        )
+        response = _create(gpt, messages=messages, tools=TOOLS)
 
         msg = response.choices[0].message
 
@@ -149,10 +158,6 @@ def chat(
             })
 
     # 超过最大轮次，做最后一次不带 tools 的调用
-    response = gpt.client.chat.completions.create(
-        model=gpt.model,
-        messages=messages,
-        temperature=0.7,
-    )
+    response = _create(gpt, messages=messages)
 
     return {"answer": response.choices[0].message.content or "", "sources": sources}
